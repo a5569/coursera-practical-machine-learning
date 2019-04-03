@@ -1,0 +1,100 @@
+---
+title: "Coursera - Practical Machine Learning"
+author: "Andre"
+date: "02/04/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(tidyverse)
+library(randomForest)
+library(rpart)
+```
+
+
+## Executive Summary
+
+In this project we will try to create a model to predict what exercise where performed base on a group of features.
+
+This project is based on a dataset provide by HAR [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har).
+
+
+## Loading and cleaning the data
+
+```{r}
+training <- read_csv("pml-training.csv", na=c("NA","#DIV/0!",""))
+testing <- read_csv("pml-testing.csv", na=c("NA","#DIV/0!",""))
+
+training <- training[, colSums(is.na(training)) == 0][,-(1:5)]
+testing <- testing[, colSums(is.na(testing)) == 0]
+```
+
+In this part we load the data, remove the lines with only NA and removing the first 5 columns since they are not needed to perform the training and evaluation.
+
+## Splitting the data
+
+To choose between the models we will split the training data between a training set and a evaluating set.
+
+```{r}
+set.seed(123)
+inTrainingDataset <- createDataPartition(y=training$classe,p=0.7, list=FALSE)
+training.train <- training[inTrainingDataset,]
+training.eval <- training[-inTrainingDataset,]
+```
+
+## Model training
+
+We will evaluate two models to choose the best one between them.
+
+### Regression Tree
+
+```{r cache=TRUE}
+set.seed(123)
+mod.dt <- train(classe ~ ., data = training.train, method = "rpart")
+```
+
+### Random Forest
+
+```{r cache=TRUE}
+set.seed(123)
+mod.rf <- train(classe ~ ., data = training.train, method = "rf")
+```
+
+## Evaluating
+
+To choose between the models we will evaluate the two models.
+
+### Regression Tree
+
+```{r cache=TRUE}
+eval.dt <- predict(mod.dt, training.eval)
+confusionMatrix(table(eval.dt, training.eval$classe))$overall[1]
+```
+
+### Random Forest
+
+```{r cache=TRUE}
+eval.rf <- predict(mod.rf, training.eval)
+confusionMatrix(table(eval.rf, training.eval$classe))$overall[1]
+```
+
+### Result
+
+```{r}
+table(eval.rf, training.eval$classe)
+```
+
+The Random Forest model had a 100% accuracy vs 49% accuracy of the Regression Tree, we will use Random Forest as our method and now we will evaluate with the testing dataset.
+
+## Testing dataset
+
+To test the model we will predict the 20 rows of the testing dataset.
+
+```{r cache=TRUE}
+eval.rf <- predict(mod.rf, testing)
+eval.rf
+```
+
+This values are correct since these values where inputed on the week test.
